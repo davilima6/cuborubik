@@ -1,4 +1,5 @@
-import { CubeProvider } from '@/contexts/CubeContext';
+// Rubik's Cube Academy - Main Page
+import { CubeProvider, useCube } from '@/contexts/CubeContext';
 import { Header } from '@/components/layout/Header';
 import { CubeViewer } from '@/components/cube/CubeViewer';
 import { PlaybackControls } from '@/components/controls/PlaybackControls';
@@ -10,7 +11,6 @@ import { AlgorithmList } from '@/components/algorithms/AlgorithmList';
 import { AlgorithmInfo } from '@/components/algorithms/AlgorithmInfo';
 import { TutorialMode } from '@/components/tutorial/TutorialMode';
 import { PracticeMode } from '@/components/practice/PracticeMode';
-import { useCube } from '@/contexts/CubeContext';
 
 function MainContent() {
   const { appMode } = useCube();
