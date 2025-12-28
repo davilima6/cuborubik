@@ -15,6 +15,11 @@ import {
 import { SOLVED_CUBE, DEFAULT_ANIMATION_SPEED } from '@/lib/rubik/constants';
 import { ALGORITHMS, getInverseMoves } from '@/lib/rubik/algorithms';
 
+interface HistoryEntry {
+  cubeState: CubeState;
+  move: Move | null; // null for initial state
+}
+
 interface CubeContextType {
   // State
   cubeState: CubeState;
@@ -24,6 +29,7 @@ interface CubeContextType {
   animationState: AnimationState;
   currentMoves: Move[];
   executedMoves: Move[];
+  cubeHistory: HistoryEntry[];
   
   // Actions
   setRenderMode: (mode: RenderMode) => void;
@@ -37,6 +43,7 @@ interface CubeContextType {
   setSpeed: (speed: number) => void;
   executeNextMove: () => void;
   executeMove: (move: Move) => void;
+  goToHistoryPoint: (index: number) => void;
 }
 
 const CubeContext = createContext<CubeContextType | null>(null);
@@ -56,6 +63,14 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
   });
   const [currentMoves, setCurrentMoves] = useState<Move[]>(ALGORITHMS[0]?.moves || []);
   const [executedMoves, setExecutedMoves] = useState<Move[]>([]);
+  const [cubeHistory, setCubeHistory] = useState<HistoryEntry[]>([]);
+
+  // Initialize history when cube is first set
+  useEffect(() => {
+    if (cubeHistory.length === 0) {
+      setCubeHistory([{ cubeState: cloneCubeState(cubeState), move: null }]);
+    }
+  }, []);
 
   const selectAlgorithm = useCallback((algorithm: Algorithm) => {
     setSelectedAlgorithm(algorithm);
@@ -67,17 +82,24 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
     const { cube } = getScrambledCube(15);
     setCubeState(cube);
     setExecutedMoves([]);
+    setCubeHistory([{ cubeState: cloneCubeState(cube), move: null }]);
     setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
   }, []);
 
   const resetCube = useCallback(() => {
-    setCubeState(cloneCubeState(SOLVED_CUBE));
+    const solved = cloneCubeState(SOLVED_CUBE);
+    setCubeState(solved);
     setExecutedMoves([]);
+    setCubeHistory([{ cubeState: cloneCubeState(solved), move: null }]);
     setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
   }, []);
 
   const executeMove = useCallback((move: Move) => {
-    setCubeState(prev => applyMove(prev, move));
+    setCubeState(prev => {
+      const newState = applyMove(prev, move);
+      setCubeHistory(history => [...history, { cubeState: cloneCubeState(newState), move }]);
+      return newState;
+    });
     setExecutedMoves(prev => [...prev, move]);
   }, []);
 
@@ -114,8 +136,19 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
     }
     setCubeState(newState);
     setExecutedMoves([]);
+    setCubeHistory([{ cubeState: cloneCubeState(newState), move: null }]);
     setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
   }, [cubeState, executedMoves]);
+
+  const goToHistoryPoint = useCallback((index: number) => {
+    if (index >= 0 && index < cubeHistory.length) {
+      const targetEntry = cubeHistory[index];
+      setCubeState(cloneCubeState(targetEntry.cubeState));
+      setExecutedMoves(cubeHistory.slice(1, index + 1).map(e => e.move!).filter(Boolean));
+      setCubeHistory(cubeHistory.slice(0, index + 1));
+      setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
+    }
+  }, [cubeHistory]);
 
   const setSpeed = useCallback((speed: number) => {
     setAnimationState(prev => ({ ...prev, speed }));
@@ -142,6 +175,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
         animationState,
         currentMoves,
         executedMoves,
+        cubeHistory,
         setRenderMode,
         setLanguage,
         selectAlgorithm,
@@ -153,6 +187,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
         setSpeed,
         executeNextMove,
         executeMove,
+        goToHistoryPoint,
       }}
     >
       {children}
