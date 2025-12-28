@@ -29,7 +29,13 @@ export const translations = {
     moveNotation: 'Move Notation',
     notationHelp: 'R = Right, L = Left, U = Up, D = Down, F = Front, B = Back. \' = Counter-clockwise, 2 = Double turn',
     solved: 'Cube Solved!',
+    unsolved: 'Not Solved',
     watchAndLearn: 'Watch & Learn',
+    history: 'Move History',
+    moves: 'moves',
+    noMoves: 'No moves executed yet',
+    initialState: 'Initial State',
+    clickToRevert: 'Click to revert',
   },
   pt: {
     title: 'Academia do Cubo Mágico',
@@ -59,7 +65,13 @@ export const translations = {
     moveNotation: 'Notação de Movimentos',
     notationHelp: 'R = Direita, L = Esquerda, U = Cima, D = Baixo, F = Frente, B = Trás. \' = Anti-horário, 2 = Duplo',
     solved: 'Cubo Resolvido!',
+    unsolved: 'Não Resolvido',
     watchAndLearn: 'Assista & Aprenda',
+    history: 'Histórico de Movimentos',
+    moves: 'movimentos',
+    noMoves: 'Nenhum movimento executado',
+    initialState: 'Estado Inicial',
+    clickToRevert: 'Clique para reverter',
   },
 };
 
