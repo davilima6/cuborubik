@@ -75,10 +75,21 @@ function getFaceFromMove(move: Move): Face {
 }
 
 // Get rotation direction and amount from move
+// For visual animation: CW rotation = negative angle on R/U/F, positive on L/D/B
 function getRotationFromMove(move: Move): { direction: 1 | -1; isDouble: boolean } {
+  const face = move.replace("'", "").replace("2", "") as Face;
   const isPrime = move.includes("'");
   const isDouble = move.includes("2");
-  return { direction: isPrime ? -1 : 1, isDouble };
+  
+  // R, U, F faces rotate "away" visually (negative angle for CW)
+  // L, D, B faces rotate "towards" visually (positive angle for CW)
+  const isPositiveFace = ['R', 'U', 'F'].includes(face);
+  const baseDirection = isPositiveFace ? -1 : 1;
+  
+  return { 
+    direction: (isPrime ? -baseDirection : baseDirection) as 1 | -1, 
+    isDouble 
+  };
 }
 
 export function CubeProvider({ children }: { children: React.ReactNode }) {
