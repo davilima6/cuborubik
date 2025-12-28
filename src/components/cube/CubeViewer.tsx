@@ -3,15 +3,11 @@ import { Cube2D } from './Cube2D';
 import { Cube3D } from './Cube3D';
 
 export function CubeViewer() {
-  const { cubeState, renderMode } = useCube();
+  const { cubeState, renderMode, rotationAnimation } = useCube();
 
-  return (
-    <div className="cube-viewer">
-      {renderMode === '3d' ? (
-        <Cube3D cubeState={cubeState} />
-      ) : (
-        <Cube2D cubeState={cubeState} />
-      )}
-    </div>
-  );
+  if (renderMode === '2d') {
+    return <Cube2D cubeState={cubeState} />;
+  }
+
+  return <Cube3D cubeState={cubeState} rotationAnimation={rotationAnimation} />;
 }
