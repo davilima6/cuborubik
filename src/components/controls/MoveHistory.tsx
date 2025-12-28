@@ -1,12 +1,21 @@
+import { useState } from 'react';
 import { useCube } from '@/contexts/CubeContext';
 import { Move } from '@/lib/rubik/types';
 import { t } from '@/lib/rubik/translations';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export function MoveHistory() {
-  const { language, goToHistoryPoint, cubeHistory, historyIndex } = useCube();
+  const { language, goToHistoryPoint, cubeHistory, historyIndex, isNavigatingHistory } = useCube();
+  const [animateOnClick, setAnimateOnClick] = useState(true);
 
   const getMoveColor = (move: Move): string => {
     const base = move[0];
@@ -21,18 +30,24 @@ export function MoveHistory() {
     return colors[base] || 'bg-muted text-foreground';
   };
 
-  const canGoBack = historyIndex > 0;
-  const canGoForward = historyIndex < cubeHistory.length - 1;
+  const canGoBack = historyIndex > 0 && !isNavigatingHistory;
+  const canGoForward = historyIndex < cubeHistory.length - 1 && !isNavigatingHistory;
 
   const handlePrev = () => {
     if (canGoBack) {
-      goToHistoryPoint(historyIndex - 1);
+      goToHistoryPoint(historyIndex - 1, animateOnClick);
     }
   };
 
   const handleNext = () => {
     if (canGoForward) {
-      goToHistoryPoint(historyIndex + 1);
+      goToHistoryPoint(historyIndex + 1, animateOnClick);
+    }
+  };
+
+  const handleHistoryClick = (index: number) => {
+    if (!isNavigatingHistory && index !== historyIndex) {
+      goToHistoryPoint(index, animateOnClick);
     }
   };
 
@@ -67,6 +82,36 @@ export function MoveHistory() {
         </div>
       </div>
       
+      {/* Animate checkbox */}
+      <TooltipProvider>
+        <div className="flex items-center gap-2 mb-3">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="animate-history"
+                  checked={animateOnClick}
+                  onCheckedChange={(checked) => setAnimateOnClick(checked === true)}
+                  disabled={isNavigatingHistory}
+                  className="h-3.5 w-3.5"
+                />
+                <label
+                  htmlFor="animate-history"
+                  className="text-xs text-muted-foreground cursor-pointer select-none"
+                >
+                  {t('animateHistory', language)}
+                </label>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              {language === 'pt' 
+                ? 'Animar movimentos ao navegar no histórico' 
+                : 'Animate moves when navigating history'}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
+      
       {cubeHistory.length <= 1 ? (
         <p className="text-xs text-muted-foreground/60 text-center py-4">
           {t('noMoves', language)}
@@ -81,14 +126,15 @@ export function MoveHistory() {
               return (
                 <button
                   key={index}
-                  onClick={() => goToHistoryPoint(index)}
+                  onClick={() => handleHistoryClick(index)}
+                  disabled={isNavigatingHistory}
                   className={`w-full flex items-center gap-2 p-2 rounded-lg transition-colors group text-left ${
                     isCurrentPosition 
                       ? 'bg-primary/20 border border-primary/40' 
                       : isFuture 
                         ? 'opacity-50 hover:opacity-100 hover:bg-muted/50'
                         : 'hover:bg-primary/10'
-                  }`}
+                  } ${isNavigatingHistory ? 'cursor-wait' : ''}`}
                 >
                   <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-mono ${
                     isCurrentPosition ? 'bg-primary text-primary-foreground' : 'bg-muted'
@@ -106,7 +152,7 @@ export function MoveHistory() {
                     </span>
                   ) : null}
                   
-                  {!isCurrentPosition && (
+                  {!isCurrentPosition && !isNavigatingHistory && (
                     <RotateCcw className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
                   )}
                   
