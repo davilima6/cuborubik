@@ -58,8 +58,9 @@ interface CubeContextType {
   setSpeed: (speed: number) => void;
   executeNextMove: () => void;
   executeMove: (move: Move) => void;
-  goToHistoryPoint: (index: number) => void;
+  goToHistoryPoint: (index: number, animate?: boolean) => void;
   setAppMode: (mode: AppMode) => void;
+  isNavigatingHistory: boolean;
   // Tutorial actions
   nextTutorialStep: () => void;
   prevTutorialStep: () => void;
@@ -117,6 +118,8 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
     stepStartCube: null,
   });
   const [rotationAnimation, setRotationAnimation] = useState<RotationAnimation | null>(null);
+  const [isNavigatingHistory, setIsNavigatingHistory] = useState(false);
+  const historyNavigationRef = useRef<{ targetIndex: number; moves: Move[]; currentMoveIdx: number } | null>(null);
   
   const animationFrameRef = useRef<number>();
   const pendingMoveRef = useRef<{ move: Move; callback?: () => void } | null>(null);
@@ -264,19 +267,58 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
     setRotationAnimation(null);
   }, [cubeState, executedMoves]);
 
-  // Navigate to any point in history without destroying it
-  const goToHistoryPoint = useCallback((index: number) => {
-    if (index >= 0 && index < cubeHistory.length) {
-      const targetEntry = cubeHistory[index];
-      setCubeState(cloneCubeState(targetEntry.cubeState));
-      setHistoryIndex(index);
-      // Update executedMoves to reflect the moves up to this point
-      const movesUpToPoint = cubeHistory.slice(1, index + 1).map(e => e.move).filter((m): m is Move => m !== null);
-      setExecutedMoves(movesUpToPoint);
-      setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
-      setRotationAnimation(null);
+  // Navigate to any point in history - with optional animation
+  const goToHistoryPoint = useCallback((index: number, animate: boolean = false) => {
+    if (index >= 0 && index < cubeHistory.length && index !== historyIndex) {
+      if (!animate || isNavigatingHistory) {
+        // Instant navigation
+        const targetEntry = cubeHistory[index];
+        setCubeState(cloneCubeState(targetEntry.cubeState));
+        setHistoryIndex(index);
+        const movesUpToPoint = cubeHistory.slice(1, index + 1).map(e => e.move).filter((m): m is Move => m !== null);
+        setExecutedMoves(movesUpToPoint);
+        setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
+        setRotationAnimation(null);
+      } else {
+        // Animated navigation - build move sequence
+        const movesToExecute: Move[] = [];
+        
+        if (index < historyIndex) {
+          // Going backwards - need inverse moves in reverse order
+          for (let i = historyIndex; i > index; i--) {
+            const move = cubeHistory[i].move;
+            if (move) {
+              // Inverse the move
+              if (move.endsWith("'")) {
+                movesToExecute.push(move.slice(0, -1) as Move);
+              } else if (move.endsWith('2')) {
+                movesToExecute.push(move as Move);
+              } else {
+                movesToExecute.push((move + "'") as Move);
+              }
+            }
+          }
+        } else {
+          // Going forward - execute moves as-is
+          for (let i = historyIndex + 1; i <= index; i++) {
+            const move = cubeHistory[i].move;
+            if (move) {
+              movesToExecute.push(move);
+            }
+          }
+        }
+        
+        if (movesToExecute.length > 0) {
+          setIsNavigatingHistory(true);
+          historyNavigationRef.current = {
+            targetIndex: index,
+            moves: movesToExecute,
+            currentMoveIdx: 0,
+          };
+        }
+      }
     }
-  }, [cubeHistory]);
+  }, [cubeHistory, historyIndex, isNavigatingHistory]);
 
   const setSpeed = useCallback((speed: number) => {
     setAnimationState(prev => ({ ...prev, speed }));
@@ -368,6 +410,56 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [animationState.isPlaying, animationState.speed, rotationAnimation?.isAnimating, appMode, executeNextMove]);
 
+  // History navigation animation loop
+  useEffect(() => {
+    if (!isNavigatingHistory || rotationAnimation?.isAnimating) return;
+    
+    const nav = historyNavigationRef.current;
+    if (!nav) {
+      setIsNavigatingHistory(false);
+      return;
+    }
+    
+    if (nav.currentMoveIdx >= nav.moves.length) {
+      // Finished - set final state
+      const targetEntry = cubeHistory[nav.targetIndex];
+      setCubeState(cloneCubeState(targetEntry.cubeState));
+      setHistoryIndex(nav.targetIndex);
+      const movesUpToPoint = cubeHistory.slice(1, nav.targetIndex + 1).map(e => e.move).filter((m): m is Move => m !== null);
+      setExecutedMoves(movesUpToPoint);
+      historyNavigationRef.current = null;
+      setIsNavigatingHistory(false);
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      const move = nav.moves[nav.currentMoveIdx];
+      
+      // Execute the animation (but don't add to history)
+      const face = getFaceFromMove(move);
+      const { direction, isDouble } = getRotationFromMove(move);
+      const targetAngle = direction * (isDouble ? 180 : 90);
+      
+      setRotationAnimation({
+        face,
+        angle: 0,
+        targetAngle,
+        isAnimating: true,
+      });
+      
+      // Update cube state immediately (visual only during navigation)
+      setCubeState(prev => applyMove(prev, move));
+      
+      // Advance navigation
+      historyNavigationRef.current = {
+        ...nav,
+        currentMoveIdx: nav.currentMoveIdx + 1,
+      };
+    }, animationState.speed);
+    
+    return () => clearTimeout(timer);
+  }, [isNavigatingHistory, rotationAnimation?.isAnimating, cubeHistory, animationState.speed]);
+
   return (
     <CubeContext.Provider
       value={{
@@ -396,6 +488,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
         executeMove,
         goToHistoryPoint,
         setAppMode,
+        isNavigatingHistory,
         nextTutorialStep,
         prevTutorialStep,
         playTutorialStep,

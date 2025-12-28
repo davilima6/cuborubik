@@ -36,6 +36,7 @@ export const translations = {
     noMoves: 'No moves executed yet',
     initialState: 'Initial State',
     clickToRevert: 'Click to revert',
+    animateHistory: 'Animate',
   },
   pt: {
     title: 'Academia do Cubo Mágico',
@@ -72,6 +73,7 @@ export const translations = {
     noMoves: 'Nenhum movimento executado',
     initialState: 'Estado Inicial',
     clickToRevert: 'Clique para reverter',
+    animateHistory: 'Animar',
   },
 };
 
