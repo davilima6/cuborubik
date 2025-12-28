@@ -41,6 +41,7 @@ interface CubeContextType {
   currentMoves: Move[];
   executedMoves: Move[];
   cubeHistory: HistoryEntry[];
+  historyIndex: number;
   appMode: AppMode;
   tutorialState: TutorialState;
   rotationAnimation: RotationAnimation | null;
@@ -96,6 +97,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
   const [currentMoves, setCurrentMoves] = useState<Move[]>(ALGORITHMS[0]?.moves || []);
   const [executedMoves, setExecutedMoves] = useState<Move[]>([]);
   const [cubeHistory, setCubeHistory] = useState<HistoryEntry[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
   const [appMode, setAppMode] = useState<AppMode>('learn');
   const [tutorialState, setTutorialState] = useState<TutorialState>({
     currentStepIndex: 0,
@@ -112,6 +114,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (cubeHistory.length === 0) {
       setCubeHistory([{ cubeState: cloneCubeState(cubeState), move: null }]);
+      setHistoryIndex(0);
     }
   }, []);
 
@@ -125,7 +128,13 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
         // Apply the actual move to cube state
         setCubeState(prev => {
           const newState = applyMove(prev, move);
-          setCubeHistory(history => [...history, { cubeState: cloneCubeState(newState), move }]);
+          // When adding a new move, truncate any future history and add new entry
+          setCubeHistory(history => {
+            const newHistory = history.slice(0, historyIndex + 1);
+            newHistory.push({ cubeState: cloneCubeState(newState), move });
+            return newHistory;
+          });
+          setHistoryIndex(prev => prev + 1);
           return newState;
         });
         setExecutedMoves(prev => [...prev, move]);
@@ -160,7 +169,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [rotationAnimation?.isAnimating]);
+  }, [rotationAnimation?.isAnimating, historyIndex]);
 
   const executeMove = useCallback((move: Move, callback?: () => void) => {
     if (rotationAnimation?.isAnimating) return;
@@ -190,6 +199,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
     setCubeState(cube);
     setExecutedMoves([]);
     setCubeHistory([{ cubeState: cloneCubeState(cube), move: null }]);
+    setHistoryIndex(0);
     setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
     setRotationAnimation(null);
   }, []);
@@ -199,6 +209,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
     setCubeState(solved);
     setExecutedMoves([]);
     setCubeHistory([{ cubeState: cloneCubeState(solved), move: null }]);
+    setHistoryIndex(0);
     setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
     setRotationAnimation(null);
   }, []);
@@ -237,16 +248,20 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
     setCubeState(newState);
     setExecutedMoves([]);
     setCubeHistory([{ cubeState: cloneCubeState(newState), move: null }]);
+    setHistoryIndex(0);
     setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
     setRotationAnimation(null);
   }, [cubeState, executedMoves]);
 
+  // Navigate to any point in history without destroying it
   const goToHistoryPoint = useCallback((index: number) => {
     if (index >= 0 && index < cubeHistory.length) {
       const targetEntry = cubeHistory[index];
       setCubeState(cloneCubeState(targetEntry.cubeState));
-      setExecutedMoves(cubeHistory.slice(1, index + 1).map(e => e.move!).filter(Boolean));
-      setCubeHistory(cubeHistory.slice(0, index + 1));
+      setHistoryIndex(index);
+      // Update executedMoves to reflect the moves up to this point
+      const movesUpToPoint = cubeHistory.slice(1, index + 1).map(e => e.move).filter((m): m is Move => m !== null);
+      setExecutedMoves(movesUpToPoint);
       setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
       setRotationAnimation(null);
     }
@@ -353,6 +368,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
         currentMoves,
         executedMoves,
         cubeHistory,
+        historyIndex,
         appMode,
         tutorialState,
         rotationAnimation,
