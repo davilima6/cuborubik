@@ -2,10 +2,11 @@ import { useCube } from '@/contexts/CubeContext';
 import { Move } from '@/lib/rubik/types';
 import { t } from '@/lib/rubik/translations';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function MoveHistory() {
-  const { executedMoves, language, goToHistoryPoint, cubeHistory } = useCube();
+  const { language, goToHistoryPoint, cubeHistory, historyIndex } = useCube();
 
   const getMoveColor = (move: Move): string => {
     const base = move[0];
@@ -20,18 +21,20 @@ export function MoveHistory() {
     return colors[base] || 'bg-muted text-foreground';
   };
 
-  if (executedMoves.length === 0) {
-    return (
-      <div className="p-4 rounded-xl bg-card border border-border">
-        <h3 className="text-sm font-medium text-muted-foreground mb-2">
-          {t('history', language)}
-        </h3>
-        <p className="text-xs text-muted-foreground/60 text-center py-4">
-          {t('noMoves', language)}
-        </p>
-      </div>
-    );
-  }
+  const canGoBack = historyIndex > 0;
+  const canGoForward = historyIndex < cubeHistory.length - 1;
+
+  const handlePrev = () => {
+    if (canGoBack) {
+      goToHistoryPoint(historyIndex - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (canGoForward) {
+      goToHistoryPoint(historyIndex + 1);
+    }
+  };
 
   return (
     <div className="p-4 rounded-xl bg-card border border-border">
@@ -39,45 +42,85 @@ export function MoveHistory() {
         <h3 className="text-sm font-medium text-muted-foreground">
           {t('history', language)}
         </h3>
-        <span className="text-xs text-muted-foreground/60">
-          {executedMoves.length} {t('moves', language)}
-        </span>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={handlePrev}
+            disabled={!canGoBack}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground min-w-[40px] text-center">
+            {historyIndex} / {cubeHistory.length - 1}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={handleNext}
+            disabled={!canGoForward}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       
-      <ScrollArea className="h-[200px] pr-2">
-        <div className="space-y-1">
-          {/* Initial state */}
-          <button
-            onClick={() => goToHistoryPoint(0)}
-            className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-primary/10 transition-colors group text-left"
-          >
-            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-mono">
-              0
-            </div>
-            <span className="text-xs text-muted-foreground group-hover:text-foreground">
-              {t('initialState', language)}
-            </span>
-            <RotateCcw className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
-          </button>
-          
-          {/* Move history */}
-          {executedMoves.map((move, index) => (
-            <button
-              key={index}
-              onClick={() => goToHistoryPoint(index + 1)}
-              className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-primary/10 transition-colors group text-left"
-            >
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-mono">
-                {index + 1}
-              </div>
-              <span className={`font-mono font-bold px-2 py-0.5 rounded border text-sm ${getMoveColor(move)}`}>
-                {move}
-              </span>
-              <RotateCcw className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
-            </button>
-          ))}
-        </div>
-      </ScrollArea>
+      {cubeHistory.length <= 1 ? (
+        <p className="text-xs text-muted-foreground/60 text-center py-4">
+          {t('noMoves', language)}
+        </p>
+      ) : (
+        <ScrollArea className="h-[200px] pr-2">
+          <div className="space-y-1">
+            {cubeHistory.map((entry, index) => {
+              const isCurrentPosition = index === historyIndex;
+              const isFuture = index > historyIndex;
+              
+              return (
+                <button
+                  key={index}
+                  onClick={() => goToHistoryPoint(index)}
+                  className={`w-full flex items-center gap-2 p-2 rounded-lg transition-colors group text-left ${
+                    isCurrentPosition 
+                      ? 'bg-primary/20 border border-primary/40' 
+                      : isFuture 
+                        ? 'opacity-50 hover:opacity-100 hover:bg-muted/50'
+                        : 'hover:bg-primary/10'
+                  }`}
+                >
+                  <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-mono ${
+                    isCurrentPosition ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                  }`}>
+                    {index}
+                  </div>
+                  
+                  {index === 0 ? (
+                    <span className="text-xs text-muted-foreground group-hover:text-foreground">
+                      {t('initialState', language)}
+                    </span>
+                  ) : entry.move ? (
+                    <span className={`font-mono font-bold px-2 py-0.5 rounded border text-sm ${getMoveColor(entry.move)}`}>
+                      {entry.move}
+                    </span>
+                  ) : null}
+                  
+                  {!isCurrentPosition && (
+                    <RotateCcw className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
+                  )}
+                  
+                  {isCurrentPosition && (
+                    <span className="ml-auto text-xs text-primary font-medium">
+                      {language === 'pt' ? 'atual' : 'current'}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      )}
     </div>
   );
 }
