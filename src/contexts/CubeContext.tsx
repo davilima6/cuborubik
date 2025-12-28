@@ -1,11 +1,14 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { 
   CubeState, 
   Move, 
   RenderMode, 
   Language, 
   Algorithm,
-  AnimationState 
+  AnimationState,
+  AppMode,
+  RotationAnimation,
+  Face,
 } from '@/lib/rubik/types';
 import { 
   cloneCubeState, 
@@ -14,10 +17,18 @@ import {
 } from '@/lib/rubik/cubeLogic';
 import { SOLVED_CUBE, DEFAULT_ANIMATION_SPEED } from '@/lib/rubik/constants';
 import { ALGORITHMS, getInverseMoves } from '@/lib/rubik/algorithms';
+import { getStepByGlobalIndex, getTotalTutorialSteps } from '@/lib/rubik/tutorial';
 
 interface HistoryEntry {
   cubeState: CubeState;
-  move: Move | null; // null for initial state
+  move: Move | null;
+}
+
+interface TutorialState {
+  currentStepIndex: number;
+  stepMoveIndex: number;
+  isPlayingStep: boolean;
+  stepStartCube: CubeState | null;
 }
 
 interface CubeContextType {
@@ -30,6 +41,9 @@ interface CubeContextType {
   currentMoves: Move[];
   executedMoves: Move[];
   cubeHistory: HistoryEntry[];
+  appMode: AppMode;
+  tutorialState: TutorialState;
+  rotationAnimation: RotationAnimation | null;
   
   // Actions
   setRenderMode: (mode: RenderMode) => void;
@@ -44,9 +58,27 @@ interface CubeContextType {
   executeNextMove: () => void;
   executeMove: (move: Move) => void;
   goToHistoryPoint: (index: number) => void;
+  setAppMode: (mode: AppMode) => void;
+  // Tutorial actions
+  nextTutorialStep: () => void;
+  prevTutorialStep: () => void;
+  playTutorialStep: () => void;
+  resetTutorialStep: () => void;
 }
 
 const CubeContext = createContext<CubeContextType | null>(null);
+
+// Get the face being rotated from a move
+function getFaceFromMove(move: Move): Face {
+  return move.replace("'", "").replace("2", "") as Face;
+}
+
+// Get rotation direction and amount from move
+function getRotationFromMove(move: Move): { direction: 1 | -1; isDouble: boolean } {
+  const isPrime = move.includes("'");
+  const isDouble = move.includes("2");
+  return { direction: isPrime ? -1 : 1, isDouble };
+}
 
 export function CubeProvider({ children }: { children: React.ReactNode }) {
   const [cubeState, setCubeState] = useState<CubeState>(() => {
@@ -64,6 +96,17 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
   const [currentMoves, setCurrentMoves] = useState<Move[]>(ALGORITHMS[0]?.moves || []);
   const [executedMoves, setExecutedMoves] = useState<Move[]>([]);
   const [cubeHistory, setCubeHistory] = useState<HistoryEntry[]>([]);
+  const [appMode, setAppMode] = useState<AppMode>('learn');
+  const [tutorialState, setTutorialState] = useState<TutorialState>({
+    currentStepIndex: 0,
+    stepMoveIndex: 0,
+    isPlayingStep: false,
+    stepStartCube: null,
+  });
+  const [rotationAnimation, setRotationAnimation] = useState<RotationAnimation | null>(null);
+  
+  const animationFrameRef = useRef<number>();
+  const pendingMoveRef = useRef<{ move: Move; callback?: () => void } | null>(null);
 
   // Initialize history when cube is first set
   useEffect(() => {
@@ -71,6 +114,70 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
       setCubeHistory([{ cubeState: cloneCubeState(cubeState), move: null }]);
     }
   }, []);
+
+  // Animation loop for rotation
+  useEffect(() => {
+    if (!rotationAnimation?.isAnimating) {
+      if (pendingMoveRef.current) {
+        const { move, callback } = pendingMoveRef.current;
+        pendingMoveRef.current = null;
+        
+        // Apply the actual move to cube state
+        setCubeState(prev => {
+          const newState = applyMove(prev, move);
+          setCubeHistory(history => [...history, { cubeState: cloneCubeState(newState), move }]);
+          return newState;
+        });
+        setExecutedMoves(prev => [...prev, move]);
+        setRotationAnimation(null);
+        
+        if (callback) callback();
+      }
+      return;
+    }
+
+    const animate = () => {
+      setRotationAnimation(prev => {
+        if (!prev) return null;
+        
+        const step = 8; // degrees per frame
+        const newAngle = prev.angle + (prev.targetAngle > 0 ? step : -step);
+        
+        if (Math.abs(newAngle) >= Math.abs(prev.targetAngle)) {
+          return { ...prev, angle: prev.targetAngle, isAnimating: false };
+        }
+        
+        return { ...prev, angle: newAngle };
+      });
+      
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+    
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [rotationAnimation?.isAnimating]);
+
+  const executeMove = useCallback((move: Move, callback?: () => void) => {
+    if (rotationAnimation?.isAnimating) return;
+    
+    const face = getFaceFromMove(move);
+    const { direction, isDouble } = getRotationFromMove(move);
+    const targetAngle = direction * (isDouble ? 180 : 90);
+    
+    pendingMoveRef.current = { move, callback };
+    
+    setRotationAnimation({
+      face,
+      angle: 0,
+      targetAngle,
+      isAnimating: true,
+    });
+  }, [rotationAnimation?.isAnimating]);
 
   const selectAlgorithm = useCallback((algorithm: Algorithm) => {
     setSelectedAlgorithm(algorithm);
@@ -84,6 +191,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
     setExecutedMoves([]);
     setCubeHistory([{ cubeState: cloneCubeState(cube), move: null }]);
     setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
+    setRotationAnimation(null);
   }, []);
 
   const resetCube = useCallback(() => {
@@ -92,25 +200,18 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
     setExecutedMoves([]);
     setCubeHistory([{ cubeState: cloneCubeState(solved), move: null }]);
     setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
-  }, []);
-
-  const executeMove = useCallback((move: Move) => {
-    setCubeState(prev => {
-      const newState = applyMove(prev, move);
-      setCubeHistory(history => [...history, { cubeState: cloneCubeState(newState), move }]);
-      return newState;
-    });
-    setExecutedMoves(prev => [...prev, move]);
+    setRotationAnimation(null);
   }, []);
 
   const executeNextMove = useCallback(() => {
     if (animationState.currentMoveIndex < currentMoves.length) {
       const move = currentMoves[animationState.currentMoveIndex];
-      executeMove(move);
-      setAnimationState(prev => ({
-        ...prev,
-        currentMoveIndex: prev.currentMoveIndex + 1,
-      }));
+      executeMove(move, () => {
+        setAnimationState(prev => ({
+          ...prev,
+          currentMoveIndex: prev.currentMoveIndex + 1,
+        }));
+      });
     } else {
       setAnimationState(prev => ({ ...prev, isPlaying: false }));
     }
@@ -128,7 +229,6 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const rewind = useCallback(() => {
-    // Apply inverse moves to go back
     const inverseMoves = getInverseMoves(executedMoves);
     let newState = cubeState;
     for (const move of inverseMoves) {
@@ -138,6 +238,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
     setExecutedMoves([]);
     setCubeHistory([{ cubeState: cloneCubeState(newState), move: null }]);
     setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
+    setRotationAnimation(null);
   }, [cubeState, executedMoves]);
 
   const goToHistoryPoint = useCallback((index: number) => {
@@ -147,6 +248,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
       setExecutedMoves(cubeHistory.slice(1, index + 1).map(e => e.move!).filter(Boolean));
       setCubeHistory(cubeHistory.slice(0, index + 1));
       setAnimationState(prev => ({ ...prev, currentMoveIndex: 0, isPlaying: false }));
+      setRotationAnimation(null);
     }
   }, [cubeHistory]);
 
@@ -154,16 +256,91 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
     setAnimationState(prev => ({ ...prev, speed }));
   }, []);
 
-  // Animation loop
+  // Tutorial actions
+  const nextTutorialStep = useCallback(() => {
+    const totalSteps = getTotalTutorialSteps();
+    setTutorialState(prev => ({
+      ...prev,
+      currentStepIndex: Math.min(prev.currentStepIndex + 1, totalSteps - 1),
+      stepMoveIndex: 0,
+      isPlayingStep: false,
+      stepStartCube: null,
+    }));
+  }, []);
+
+  const prevTutorialStep = useCallback(() => {
+    setTutorialState(prev => ({
+      ...prev,
+      currentStepIndex: Math.max(prev.currentStepIndex - 1, 0),
+      stepMoveIndex: 0,
+      isPlayingStep: false,
+      stepStartCube: null,
+    }));
+  }, []);
+
+  const playTutorialStep = useCallback(() => {
+    const stepData = getStepByGlobalIndex(tutorialState.currentStepIndex);
+    if (!stepData || stepData.step.moves.length === 0) return;
+
+    // Save current cube state if starting fresh
+    if (tutorialState.stepMoveIndex === 0) {
+      setTutorialState(prev => ({
+        ...prev,
+        isPlayingStep: true,
+        stepStartCube: cloneCubeState(cubeState),
+      }));
+    } else {
+      setTutorialState(prev => ({ ...prev, isPlayingStep: true }));
+    }
+  }, [tutorialState.currentStepIndex, tutorialState.stepMoveIndex, cubeState]);
+
+  const resetTutorialStep = useCallback(() => {
+    if (tutorialState.stepStartCube) {
+      setCubeState(cloneCubeState(tutorialState.stepStartCube));
+    }
+    setTutorialState(prev => ({
+      ...prev,
+      stepMoveIndex: 0,
+      isPlayingStep: false,
+    }));
+  }, [tutorialState.stepStartCube]);
+
+  // Tutorial animation loop
   useEffect(() => {
-    if (!animationState.isPlaying) return;
+    if (!tutorialState.isPlayingStep || rotationAnimation?.isAnimating) return;
+
+    const stepData = getStepByGlobalIndex(tutorialState.currentStepIndex);
+    if (!stepData) return;
+
+    const moves = stepData.step.moves;
+    if (tutorialState.stepMoveIndex >= moves.length) {
+      setTutorialState(prev => ({ ...prev, isPlayingStep: false }));
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const move = moves[tutorialState.stepMoveIndex];
+      executeMove(move, () => {
+        setTutorialState(prev => ({
+          ...prev,
+          stepMoveIndex: prev.stepMoveIndex + 1,
+        }));
+      });
+    }, animationState.speed);
+
+    return () => clearTimeout(timer);
+  }, [tutorialState.isPlayingStep, tutorialState.stepMoveIndex, tutorialState.currentStepIndex, rotationAnimation?.isAnimating, animationState.speed, executeMove]);
+
+  // Learn mode animation loop
+  useEffect(() => {
+    if (!animationState.isPlaying || rotationAnimation?.isAnimating || appMode !== 'learn') return;
 
     const timer = setTimeout(() => {
       executeNextMove();
     }, animationState.speed);
 
     return () => clearTimeout(timer);
-  }, [animationState.isPlaying, animationState.speed, executeNextMove]);
+  }, [animationState.isPlaying, animationState.speed, rotationAnimation?.isAnimating, appMode, executeNextMove]);
 
   return (
     <CubeContext.Provider
@@ -176,6 +353,9 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
         currentMoves,
         executedMoves,
         cubeHistory,
+        appMode,
+        tutorialState,
+        rotationAnimation,
         setRenderMode,
         setLanguage,
         selectAlgorithm,
@@ -188,6 +368,11 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
         executeNextMove,
         executeMove,
         goToHistoryPoint,
+        setAppMode,
+        nextTutorialStep,
+        prevTutorialStep,
+        playTutorialStep,
+        resetTutorialStep,
       }}
     >
       {children}

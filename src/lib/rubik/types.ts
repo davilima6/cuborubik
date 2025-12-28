@@ -38,8 +38,17 @@ export type RenderMode = '2d' | '3d';
 
 export type Language = 'en' | 'pt';
 
+export type AppMode = 'learn' | 'tutorial' | 'practice';
+
 export interface AnimationState {
   isPlaying: boolean;
   currentMoveIndex: number;
   speed: number; // ms per move
+}
+
+export interface RotationAnimation {
+  face: Face;
+  angle: number; // Current rotation angle (0 to 90 or -90)
+  targetAngle: number; // Target angle
+  isAnimating: boolean;
 }
