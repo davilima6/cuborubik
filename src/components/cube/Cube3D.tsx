@@ -62,15 +62,15 @@ function isAffectedByRotation(position: [number, number, number], face: Face): b
   }
 }
 
-// Get rotation axis for a face
+// Get rotation axis for a face - returns normalized axis (direction determined by angle sign)
 function getRotationAxis(face: Face): THREE.Vector3 {
   switch (face) {
     case 'R': return new THREE.Vector3(1, 0, 0);
-    case 'L': return new THREE.Vector3(-1, 0, 0);
+    case 'L': return new THREE.Vector3(1, 0, 0);
     case 'U': return new THREE.Vector3(0, 1, 0);
-    case 'D': return new THREE.Vector3(0, -1, 0);
+    case 'D': return new THREE.Vector3(0, 1, 0);
     case 'F': return new THREE.Vector3(0, 0, 1);
-    case 'B': return new THREE.Vector3(0, 0, -1);
+    case 'B': return new THREE.Vector3(0, 0, 1);
     default: return new THREE.Vector3(0, 1, 0);
   }
 }
