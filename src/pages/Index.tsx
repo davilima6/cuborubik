@@ -22,9 +22,23 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 
 function MobileContent() {
-  const { appMode } = useCube();
+  const { appMode, language } = useCube();
   const [isControlsOpen, setIsControlsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+
+  // Import t function inline to avoid circular deps
+  const translations = {
+    en: { historyShort: 'History', controls: 'Controls', tutorial: 'Tutorial', practice: 'Practice' },
+    pt: { historyShort: 'Histórico', controls: 'Controles', tutorial: 'Tutorial', practice: 'Prática' },
+  };
+  const t = (key: keyof typeof translations.en) => translations[language][key];
+
+  const getControlsLabel = () => {
+    if (appMode === 'learn') return t('controls');
+    if (appMode === 'tutorial') return t('tutorial');
+    return t('practice');
+  };
 
   return (
     <main className="flex-1 p-3 flex flex-col gap-3 overflow-hidden">
@@ -34,11 +48,28 @@ function MobileContent() {
         <SolvedIndicator />
       </div>
 
-      {/* Collapsible history - moved above cube */}
+      {/* Collapsible tutorial - above history, only in tutorial mode */}
+      {appMode === 'tutorial' && (
+        <Collapsible open={isTutorialOpen} onOpenChange={setIsTutorialOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              {t('tutorial')}
+              {isTutorialOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <div className="p-3 rounded-lg bg-card/50 border border-border max-h-[40vh] overflow-y-auto">
+              <TutorialMode />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {/* Collapsible history - above cube */}
       <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
         <CollapsibleTrigger asChild>
           <Button variant="outline" className="w-full justify-between">
-            History
+            {t('historyShort')}
             {isHistoryOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
         </CollapsibleTrigger>
@@ -57,30 +88,31 @@ function MobileContent() {
       {/* Current move display */}
       <MoveDisplay />
 
-      {/* Collapsible controls section */}
-      <Collapsible open={isControlsOpen} onOpenChange={setIsControlsOpen}>
-        <CollapsibleTrigger asChild>
-          <Button variant="outline" className="w-full justify-between">
-            {appMode === 'learn' ? 'Controls' : appMode === 'tutorial' ? 'Tutorial' : 'Practice'}
-            {isControlsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-2">
-          <div className="p-3 rounded-lg bg-card/50 border border-border max-h-[40vh] overflow-y-auto">
-            {appMode === 'learn' && (
-              <>
-                <AlgorithmList />
-                <div className="mt-4">
-                  <PlaybackControls />
-                </div>
-                <AlgorithmInfo />
-              </>
-            )}
-            {appMode === 'tutorial' && <TutorialMode />}
-            {appMode === 'practice' && <PracticeMode />}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+      {/* Collapsible controls section - learn and practice modes only */}
+      {appMode !== 'tutorial' && (
+        <Collapsible open={isControlsOpen} onOpenChange={setIsControlsOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              {getControlsLabel()}
+              {isControlsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <div className="p-3 rounded-lg bg-card/50 border border-border max-h-[40vh] overflow-y-auto">
+              {appMode === 'learn' && (
+                <>
+                  <AlgorithmList />
+                  <div className="mt-4">
+                    <PlaybackControls />
+                  </div>
+                  <AlgorithmInfo />
+                </>
+              )}
+              {appMode === 'practice' && <PracticeMode />}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </main>
   );
 }

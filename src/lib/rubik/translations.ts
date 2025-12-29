@@ -32,6 +32,7 @@ export const translations = {
     unsolved: 'Not Solved',
     watchAndLearn: 'Watch & Learn',
     history: 'Move History',
+    historyShort: 'History',
     moves: 'moves',
     noMoves: 'No moves executed yet',
     initialState: 'Initial State',
@@ -40,6 +41,8 @@ export const translations = {
     fullscreen: 'Fullscreen',
     exitFullscreen: 'Exit fullscreen',
     touchHint: 'Tap edges for moves, long press for inverse',
+    tutorial: 'Tutorial',
+    practice: 'Practice',
   },
   pt: {
     title: 'Academia do Cubo Mágico',
@@ -72,6 +75,7 @@ export const translations = {
     unsolved: 'Não Resolvido',
     watchAndLearn: 'Assista & Aprenda',
     history: 'Histórico de Movimentos',
+    historyShort: 'Histórico',
     moves: 'movimentos',
     noMoves: 'Nenhum movimento executado',
     initialState: 'Estado Inicial',
@@ -80,6 +84,8 @@ export const translations = {
     fullscreen: 'Tela cheia',
     exitFullscreen: 'Sair da tela cheia',
     touchHint: 'Toque nas bordas para movimentos, segure para inverso',
+    tutorial: 'Tutorial',
+    practice: 'Prática',
   },
 };
 
