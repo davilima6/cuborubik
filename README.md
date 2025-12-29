@@ -116,7 +116,9 @@ No celular, você tem controles touch especiais:
 | Toque | Ação |
 |-------|------|
 | **Toque rápido** | Movimento normal (ex: R) |
-| **Toque longo** | Movimento inverso (ex: R') |
+| **Segurar ~0.5s** | Movimento inverso (ex: R') — o botão cresce e mostra `'` |
+
+> 💡 **Dica**: Quando você segura o botão, ele aumenta de tamanho e mostra o apóstrofo (`'`) indicando que vai fazer o movimento inverso. Também vibra levemente (se seu celular suportar).
 
 #### Modo Tela Cheia
 

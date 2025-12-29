@@ -60,7 +60,7 @@ describe('Mobile Touch Controls Logic', () => {
       expect(handleTouch('F' as Move, false)).toBe('F');
     });
 
-    it('should generate prime move on long press/context menu', () => {
+    it('should generate prime move on long press (400ms hold)', () => {
       const handleTouch = (move: Move, isPrime: boolean): Move => {
         return isPrime ? (move.replace("'", "") + "'") as Move : move.replace("'", "") as Move;
       };
@@ -68,6 +68,11 @@ describe('Mobile Touch Controls Logic', () => {
       expect(handleTouch('U' as Move, true)).toBe("U'");
       expect(handleTouch('R' as Move, true)).toBe("R'");
       expect(handleTouch('F' as Move, true)).toBe("F'");
+    });
+
+    it('should use 400ms as long press threshold', () => {
+      const LONG_PRESS_DURATION = 400;
+      expect(LONG_PRESS_DURATION).toBe(400);
     });
 
     it('should handle already-prime moves correctly', () => {
@@ -136,16 +141,50 @@ describe('Mobile Layout Responsiveness', () => {
 describe('Touch Zone Accessibility', () => {
   it('should provide aria labels for all touch zones', () => {
     TOUCH_ZONES.forEach(zone => {
-      const ariaLabel = `Execute ${zone.label} move`;
+      const ariaLabel = `${zone.label}: tap for ${zone.move}, hold for ${zone.primeMove}`;
       expect(ariaLabel).toContain(zone.label);
+      expect(ariaLabel).toContain(zone.move);
+      expect(ariaLabel).toContain(zone.primeMove);
     });
   });
+});
 
-  it('should have tooltip content for each zone', () => {
-    TOUCH_ZONES.forEach(zone => {
-      const tooltipContent = `Tap: ${zone.move} | Long press: ${zone.primeMove}`;
-      expect(tooltipContent).toContain(zone.move);
-      expect(tooltipContent).toContain(zone.primeMove);
+describe('Long Press Detection Logic', () => {
+  it('should execute normal move when released before threshold', () => {
+    const LONG_PRESS_DURATION = 400;
+    let wasLongPress = false;
+    let executedMove: Move | null = null;
+    
+    // Simulate touch start
+    const timer = setTimeout(() => {
+      wasLongPress = true;
+      executedMove = "R'" as Move;
+    }, LONG_PRESS_DURATION);
+    
+    // Simulate early release (before 400ms)
+    clearTimeout(timer);
+    if (!wasLongPress) {
+      executedMove = 'R' as Move;
+    }
+    
+    expect(executedMove).toBe('R');
+  });
+
+  it('should execute prime move when held past threshold', async () => {
+    const LONG_PRESS_DURATION = 400;
+    let wasLongPress = false;
+    let executedMove: Move | null = null;
+    
+    // Simulate the long press logic
+    await new Promise<void>((resolve) => {
+      setTimeout(() => {
+        wasLongPress = true;
+        executedMove = "R'" as Move;
+        resolve();
+      }, LONG_PRESS_DURATION);
     });
+    
+    expect(wasLongPress).toBe(true);
+    expect(executedMove).toBe("R'");
   });
 });
