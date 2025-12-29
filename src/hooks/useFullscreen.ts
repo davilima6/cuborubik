@@ -23,7 +23,14 @@ export function useFullscreen(elementRef: React.RefObject<HTMLElement>) {
 
   const enterFullscreen = useCallback(async () => {
     const element = elementRef.current;
-    if (!element) return;
+
+    // If for any reason we don't have the element (race during layout/HMR),
+    // still allow CSS "fullscreen" as a safe fallback (important on iOS).
+    if (!element) {
+      setIsCssFullscreen(true);
+      setIsFullscreen(true);
+      return;
+    }
 
     const requestNativeFullscreen = async (): Promise<boolean> => {
       if (element.requestFullscreen) {
@@ -119,5 +126,45 @@ export function useFullscreen(elementRef: React.RefObject<HTMLElement>) {
     };
   }, [isCssFullscreen]);
 
-  return { isFullscreen, toggleFullscreen, enterFullscreen, exitFullscreen };
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    // Lock scrolling only for CSS fullscreen mode (iOS / unsupported browsers).
+    if (!isCssFullscreen) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyPosition = body.style.position;
+    const prevBodyTop = body.style.top;
+    const prevBodyLeft = body.style.left;
+    const prevBodyRight = body.style.right;
+    const prevBodyWidth = body.style.width;
+
+    const scrollY = window.scrollY;
+
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      body.style.position = prevBodyPosition;
+      body.style.top = prevBodyTop;
+      body.style.left = prevBodyLeft;
+      body.style.right = prevBodyRight;
+      body.style.width = prevBodyWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isCssFullscreen]);
+
+  return { isFullscreen, isCssFullscreen, toggleFullscreen, enterFullscreen, exitFullscreen };
+
 }
