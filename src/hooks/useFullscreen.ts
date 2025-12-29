@@ -16,6 +16,7 @@ export function isFullscreenSupported(): boolean {
 
 export function useFullscreen(elementRef: React.RefObject<HTMLElement>) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isCssFullscreen, setIsCssFullscreen] = useState(false);
   const supportsNativeFullscreen = isFullscreenApiSupported();
 
   const enterFullscreen = useCallback(async () => {
@@ -31,18 +32,29 @@ export function useFullscreen(elementRef: React.RefObject<HTMLElement>) {
         } else if ((element as any).msRequestFullscreen) {
           await (element as any).msRequestFullscreen();
         }
+        // Native fullscreen will trigger the change event
       } catch (err) {
         console.error('Failed to enter fullscreen:', err);
         // Fallback to CSS fullscreen
+        setIsCssFullscreen(true);
         setIsFullscreen(true);
       }
     } else {
       // CSS-only fullscreen for unsupported browsers (iOS Safari)
+      setIsCssFullscreen(true);
       setIsFullscreen(true);
     }
   }, [elementRef, supportsNativeFullscreen]);
 
   const exitFullscreen = useCallback(async () => {
+    // If using CSS fullscreen, just toggle state
+    if (isCssFullscreen) {
+      setIsCssFullscreen(false);
+      setIsFullscreen(false);
+      return;
+    }
+
+    // Otherwise try native exit
     if (supportsNativeFullscreen && document.fullscreenElement) {
       try {
         if (document.exitFullscreen) {
@@ -59,7 +71,7 @@ export function useFullscreen(elementRef: React.RefObject<HTMLElement>) {
     } else {
       setIsFullscreen(false);
     }
-  }, [supportsNativeFullscreen]);
+  }, [supportsNativeFullscreen, isCssFullscreen]);
 
   const toggleFullscreen = useCallback(() => {
     if (isFullscreen) {
@@ -75,7 +87,10 @@ export function useFullscreen(elementRef: React.RefObject<HTMLElement>) {
         document.fullscreenElement ||
         (document as any).webkitFullscreenElement
       );
-      setIsFullscreen(isNativeFullscreen);
+      // Only update if not using CSS fullscreen mode
+      if (!isCssFullscreen) {
+        setIsFullscreen(isNativeFullscreen);
+      }
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -85,7 +100,7 @@ export function useFullscreen(elementRef: React.RefObject<HTMLElement>) {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
     };
-  }, []);
+  }, [isCssFullscreen]);
 
   return { isFullscreen, toggleFullscreen, enterFullscreen, exitFullscreen };
 }
