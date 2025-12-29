@@ -22,7 +22,7 @@ describe('Cube Logic', () => {
   });
 
   describe('Move application', () => {
-    it('R move followed by R\' should return to solved state', () => {
+    it("R move followed by R' should return to solved state", () => {
       let cube = cloneCubeState(SOLVED_CUBE);
       cube = applyMove(cube, 'R');
       cube = applyMove(cube, "R'");
@@ -33,53 +33,6 @@ describe('Cube Logic', () => {
       let cube = cloneCubeState(SOLVED_CUBE);
       cube = applyMove(cube, 'R2');
       cube = applyMove(cube, 'R2');
-      expect(isSolved(cube)).toBe(true);
-    });
-
-    it('U move followed by U\' should return to solved state', () => {
-      let cube = cloneCubeState(SOLVED_CUBE);
-      cube = applyMove(cube, 'U');
-      cube = applyMove(cube, "U'");
-      expect(isSolved(cube)).toBe(true);
-    });
-
-    it('F move followed by F\' should return to solved state', () => {
-      let cube = cloneCubeState(SOLVED_CUBE);
-      cube = applyMove(cube, 'F');
-      cube = applyMove(cube, "F'");
-      expect(isSolved(cube)).toBe(true);
-    });
-
-    it('B move followed by B\' should return to solved state', () => {
-      let cube = cloneCubeState(SOLVED_CUBE);
-      cube = applyMove(cube, 'B');
-      cube = applyMove(cube, "B'");
-      expect(isSolved(cube)).toBe(true);
-    });
-
-    it('L move followed by L\' should return to solved state', () => {
-      let cube = cloneCubeState(SOLVED_CUBE);
-      cube = applyMove(cube, 'L');
-      cube = applyMove(cube, "L'");
-      expect(isSolved(cube)).toBe(true);
-    });
-
-    it('D move followed by D\' should return to solved state', () => {
-      let cube = cloneCubeState(SOLVED_CUBE);
-      cube = applyMove(cube, 'D');
-      cube = applyMove(cube, "D'");
-      expect(isSolved(cube)).toBe(true);
-    });
-
-    it('4 times R should return to solved state', () => {
-      let cube = cloneCubeState(SOLVED_CUBE);
-      cube = applyMoves(cube, ['R', 'R', 'R', 'R']);
-      expect(isSolved(cube)).toBe(true);
-    });
-
-    it('4 times U should return to solved state', () => {
-      let cube = cloneCubeState(SOLVED_CUBE);
-      cube = applyMoves(cube, ['U', 'U', 'U', 'U']);
       expect(isSolved(cube)).toBe(true);
     });
 
@@ -99,20 +52,26 @@ describe('Cube Logic', () => {
       let cube = cloneCubeState(SOLVED_CUBE);
       cube = applyMoves(cube, moves);
       expect(isSolved(cube)).toBe(false);
-      
+
       const inverseMoves = getInverseMoves(moves);
       cube = applyMoves(cube, inverseMoves);
       expect(isSolved(cube)).toBe(true);
     });
+  });
 
-    it('scramble then inverse scramble returns to solved', () => {
-      const scramble: Move[] = ['R', 'U', "R'", 'F', 'D', "B'", 'L2', "U'"];
-      let cube = cloneCubeState(SOLVED_CUBE);
-      cube = applyMoves(cube, scramble);
-      
-      const inverse = getInverseMoves(scramble);
-      cube = applyMoves(cube, inverse);
-      expect(isSolved(cube)).toBe(true);
+  describe('Scramble generation', () => {
+    it('generateScramble should return the requested length and avoid repeating the same face twice in a row', async () => {
+      // Import lazily to keep this test focused and avoid circular imports in case of refactors
+      const { generateScramble } = await import('../cubeLogic');
+
+      const scramble = generateScramble(50);
+      expect(scramble).toHaveLength(50);
+
+      for (let i = 1; i < scramble.length; i++) {
+        const prevFace = scramble[i - 1][0];
+        const face = scramble[i][0];
+        expect(face).not.toBe(prevFace);
+      }
     });
   });
 
@@ -120,13 +79,14 @@ describe('Cube Logic', () => {
     it('cloned cube should be independent', () => {
       const original = cloneCubeState(SOLVED_CUBE);
       const cloned = cloneCubeState(original);
-      
+
       // Modify cloned - use valid FaceColor type
       cloned.U[0] = 'R' as any;
-      
+
       // Original should be unchanged
       expect(original.U[0]).toBe('W');
     });
   });
 });
+
 

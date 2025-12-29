@@ -18,23 +18,38 @@ export function isFullscreenSupported(): boolean {
 export function useFullscreen(elementRef: React.RefObject<HTMLElement>) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isCssFullscreen, setIsCssFullscreen] = useState(false);
-  
+
   const supportsNativeFullscreen = useMemo(() => checkFullscreenApiSupport(), []);
 
   const enterFullscreen = useCallback(async () => {
     const element = elementRef.current;
     if (!element) return;
 
+    const requestNativeFullscreen = async (): Promise<boolean> => {
+      if (element.requestFullscreen) {
+        await element.requestFullscreen();
+        return true;
+      }
+      if ((element as any).webkitRequestFullscreen) {
+        await (element as any).webkitRequestFullscreen();
+        return true;
+      }
+      if ((element as any).msRequestFullscreen) {
+        await (element as any).msRequestFullscreen();
+        return true;
+      }
+      return false;
+    };
+
     if (supportsNativeFullscreen) {
       try {
-        if (element.requestFullscreen) {
-          await element.requestFullscreen();
-        } else if ((element as any).webkitRequestFullscreen) {
-          await (element as any).webkitRequestFullscreen();
-        } else if ((element as any).msRequestFullscreen) {
-          await (element as any).msRequestFullscreen();
+        const didRequest = await requestNativeFullscreen();
+        if (!didRequest) {
+          // Some browsers expose "enabled" flags but don't implement element request methods (notably iOS Safari).
+          setIsCssFullscreen(true);
+          setIsFullscreen(true);
         }
-        // Native fullscreen will trigger the change event
+        // If native request succeeded, the change event will update state.
       } catch (err) {
         console.error('Failed to enter fullscreen:', err);
         // Fallback to CSS fullscreen
