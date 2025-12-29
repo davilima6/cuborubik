@@ -198,9 +198,16 @@ function CubeGroup({ cubeState, rotationAnimation }: { cubeState: CubeState; rot
   );
 }
 
-export function Cube3D({ cubeState, rotationAnimation }: Cube3DProps) {
+interface Cube3DContainerProps extends Cube3DProps {
+  isFullscreen?: boolean;
+}
+
+export function Cube3D({ cubeState, rotationAnimation, isFullscreen }: Cube3DContainerProps) {
   return (
-    <div className="w-full h-[380px] rounded-xl overflow-hidden" style={{ background: 'hsl(var(--card))' }}>
+    <div 
+      className={`w-full rounded-xl overflow-hidden ${isFullscreen ? 'h-full' : 'h-[380px]'}`}
+      style={{ background: 'hsl(var(--card))' }}
+    >
       <Canvas camera={{ position: [4, 3, 4], fov: 50 }}>
         <ambientLight intensity={0.6} />
         <directionalLight position={[10, 10, 5]} intensity={1} />

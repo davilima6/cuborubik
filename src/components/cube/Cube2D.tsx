@@ -4,13 +4,14 @@ import { FACE_COLORS } from '@/lib/rubik/constants';
 
 interface Cube2DProps {
   cubeState: CubeState;
+  isFullscreen?: boolean;
 }
 
 const CELL_SIZE = 36;
 const GAP = 2;
 const FACE_SIZE = CELL_SIZE * 3 + GAP * 2;
 
-export function Cube2D({ cubeState }: Cube2DProps) {
+export function Cube2D({ cubeState, isFullscreen }: Cube2DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -81,12 +82,14 @@ export function Cube2D({ cubeState }: Cube2DProps) {
   }, [cubeState]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={500}
-      height={380}
-      className="rounded-xl"
-      style={{ background: 'hsl(var(--card))' }}
-    />
+    <div className={`w-full ${isFullscreen ? 'h-full flex items-center justify-center' : ''}`}>
+      <canvas
+        ref={canvasRef}
+        width={500}
+        height={380}
+        className="rounded-xl max-w-full"
+        style={{ background: 'hsl(var(--card))' }}
+      />
+    </div>
   );
 }
