@@ -44,12 +44,12 @@ export function FullscreenCubeViewer() {
       )}
 
       {/* Cube viewer container */}
-      <div className={`relative ${isFullscreen ? 'w-full h-full flex items-center justify-center' : ''}`}>
-        <div className={isFullscreen ? 'w-full max-w-lg aspect-square' : 'w-full'}>
+      <div className={`relative ${isFullscreen ? 'w-full h-full flex items-center justify-center p-8' : ''}`}>
+        <div className={isFullscreen ? 'w-full h-full max-w-[90vh] max-h-[90vw] aspect-square' : 'w-full'}>
           {renderMode === '2d' ? (
-            <Cube2D cubeState={cubeState} />
+            <Cube2D cubeState={cubeState} isFullscreen={isFullscreen} />
           ) : (
-            <Cube3D cubeState={cubeState} rotationAnimation={rotationAnimation} />
+            <Cube3D cubeState={cubeState} rotationAnimation={rotationAnimation} isFullscreen={isFullscreen} />
           )}
         </div>
         
