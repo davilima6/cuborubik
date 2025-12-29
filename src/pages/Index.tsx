@@ -34,6 +34,21 @@ function MobileContent() {
         <SolvedIndicator />
       </div>
 
+      {/* Collapsible history - moved above cube */}
+      <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full justify-between">
+            History
+            {isHistoryOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2">
+          <div className="max-h-[30vh] overflow-y-auto">
+            <MoveHistory />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
       {/* Cube viewer - takes priority */}
       <div className="flex-shrink-0">
         <FullscreenCubeViewer />
@@ -63,21 +78,6 @@ function MobileContent() {
             )}
             {appMode === 'tutorial' && <TutorialMode />}
             {appMode === 'practice' && <PracticeMode />}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-
-      {/* Collapsible history */}
-      <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-        <CollapsibleTrigger asChild>
-          <Button variant="outline" className="w-full justify-between">
-            History
-            {isHistoryOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-2">
-          <div className="max-h-[30vh] overflow-y-auto">
-            <MoveHistory />
           </div>
         </CollapsibleContent>
       </Collapsible>
