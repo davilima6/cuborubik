@@ -37,6 +37,9 @@ export const translations = {
     initialState: 'Initial State',
     clickToRevert: 'Click to revert',
     animateHistory: 'Animate',
+    fullscreen: 'Fullscreen',
+    exitFullscreen: 'Exit fullscreen',
+    touchHint: 'Tap edges for moves, long press for inverse',
   },
   pt: {
     title: 'Academia do Cubo Mágico',
@@ -74,6 +77,9 @@ export const translations = {
     initialState: 'Estado Inicial',
     clickToRevert: 'Clique para reverter',
     animateHistory: 'Animar',
+    fullscreen: 'Tela cheia',
+    exitFullscreen: 'Sair da tela cheia',
+    touchHint: 'Toque nas bordas para movimentos, segure para inverso',
   },
 };
 
