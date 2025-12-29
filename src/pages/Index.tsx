@@ -25,7 +25,6 @@ function MobileContent() {
   const { appMode, language } = useCube();
   const [isControlsOpen, setIsControlsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
   // Import t function inline to avoid circular deps
   const translations = {
@@ -48,22 +47,30 @@ function MobileContent() {
         <SolvedIndicator />
       </div>
 
-      {/* Collapsible tutorial - above history, only in tutorial mode */}
-      {appMode === 'tutorial' && (
-        <Collapsible open={isTutorialOpen} onOpenChange={setIsTutorialOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              {t('tutorial')}
-              {isTutorialOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2">
-            <div className="p-3 rounded-lg bg-card/50 border border-border max-h-[40vh] overflow-y-auto">
-              <TutorialMode />
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      )}
+      {/* Collapsible controls/tutorial/practice - above history */}
+      <Collapsible open={isControlsOpen} onOpenChange={setIsControlsOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full justify-between">
+            {getControlsLabel()}
+            {isControlsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2">
+          <div className="p-3 rounded-lg bg-card/50 border border-border max-h-[40vh] overflow-y-auto">
+            {appMode === 'learn' && (
+              <>
+                <AlgorithmList />
+                <div className="mt-4">
+                  <PlaybackControls />
+                </div>
+                <AlgorithmInfo />
+              </>
+            )}
+            {appMode === 'tutorial' && <TutorialMode />}
+            {appMode === 'practice' && <PracticeMode />}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Collapsible history - above cube */}
       <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
@@ -87,32 +94,6 @@ function MobileContent() {
 
       {/* Current move display */}
       <MoveDisplay />
-
-      {/* Collapsible controls section - learn and practice modes only */}
-      {appMode !== 'tutorial' && (
-        <Collapsible open={isControlsOpen} onOpenChange={setIsControlsOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              {getControlsLabel()}
-              {isControlsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2">
-            <div className="p-3 rounded-lg bg-card/50 border border-border max-h-[40vh] overflow-y-auto">
-              {appMode === 'learn' && (
-                <>
-                  <AlgorithmList />
-                  <div className="mt-4">
-                    <PlaybackControls />
-                  </div>
-                  <AlgorithmInfo />
-                </>
-              )}
-              {appMode === 'practice' && <PracticeMode />}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      )}
     </main>
   );
 }
