@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 
-// Check if native fullscreen API is supported
-export function isFullscreenApiSupported(): boolean {
+// Check if native fullscreen API is supported (safe for SSR)
+function checkFullscreenApiSupport(): boolean {
+  if (typeof document === 'undefined') return false;
   return !!(
     document.fullscreenEnabled ||
     (document as any).webkitFullscreenEnabled ||
@@ -17,7 +18,8 @@ export function isFullscreenSupported(): boolean {
 export function useFullscreen(elementRef: React.RefObject<HTMLElement>) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isCssFullscreen, setIsCssFullscreen] = useState(false);
-  const supportsNativeFullscreen = isFullscreenApiSupported();
+  
+  const supportsNativeFullscreen = useMemo(() => checkFullscreenApiSupport(), []);
 
   const enterFullscreen = useCallback(async () => {
     const element = elementRef.current;
