@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type PointerEvent } from 'react';
 import { useCube } from '@/contexts/CubeContext';
 import { Move } from '@/lib/rubik/types';
 
@@ -55,65 +55,89 @@ function TouchZoneButton({ zone, onTap, disabled }: TouchZoneButtonProps) {
   const [isLongPress, setIsLongPress] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wasLongPressRef = useRef(false);
-  
-  const sizeClasses = isCorner 
-    ? 'w-12 h-12' 
-    : isHorizontal 
-      ? 'w-20 h-10' 
+
+  const sizeClasses = isCorner
+    ? 'w-12 h-12'
+    : isHorizontal
+      ? 'w-20 h-10'
       : 'w-10 h-20';
 
-  const handleTouchStart = useCallback(() => {
+  const vibrate = useCallback((ms: number) => {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      // iOS Safari typically doesn't support this; Android does.
+      (navigator as Navigator).vibrate?.(ms);
+    }
+  }, []);
+
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const handlePressStart = useCallback((e: PointerEvent<HTMLButtonElement>) => {
     if (disabled) return;
+
+    // Prevent the synthetic click / "ghost" mouse events some mobile browsers dispatch after touch.
+    e.preventDefault();
+
     wasLongPressRef.current = false;
+
+    // Capture ensures we keep receiving the pointerup even if the finger moves slightly.
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+
+    clearTimer();
     timerRef.current = setTimeout(() => {
       wasLongPressRef.current = true;
       setIsLongPress(true);
-      onTap(true); // Execute prime move
-      // Vibrate if supported
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
-      }
+      onTap(true); // prime move
+      vibrate(25);
     }, LONG_PRESS_DURATION);
-  }, [disabled, onTap]);
+  }, [clearTimer, disabled, onTap, vibrate]);
 
-  const handleTouchEnd = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    if (!wasLongPressRef.current && !disabled) {
-      onTap(false); // Execute normal move
-    }
-    setIsLongPress(false);
-  }, [disabled, onTap]);
+  const handlePressEnd = useCallback((e: PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    clearTimer();
 
-  const handleTouchCancel = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
+    if (!disabled && !wasLongPressRef.current) {
+      onTap(false); // normal move
+      vibrate(10);
     }
+
     setIsLongPress(false);
-  }, []);
+  }, [clearTimer, disabled, onTap, vibrate]);
+
+  const handlePressCancel = useCallback((e: PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    clearTimer();
+    setIsLongPress(false);
+  }, [clearTimer]);
 
   return (
     <button
-      className={`
+      type="button"
+      className={
+        `
         absolute ${zone.position} ${sizeClasses}
         pointer-events-auto touch-none select-none
         flex items-center justify-center
         ${zone.bgColor} text-black font-bold text-sm
-        rounded-lg ${isLongPress ? 'opacity-100 scale-110' : 'opacity-60'} 
+        rounded-lg ${isLongPress ? 'opacity-100 scale-110' : 'opacity-60'}
         active:opacity-100
         transition-all duration-150
         border-2 border-black/20 shadow-md
         disabled:opacity-30
-      `}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchCancel}
-      onMouseDown={handleTouchStart}
-      onMouseUp={handleTouchEnd}
-      onMouseLeave={handleTouchCancel}
+      `
+      }
+      onPointerDown={handlePressStart}
+      onPointerUp={handlePressEnd}
+      onPointerCancel={handlePressCancel}
+      onPointerLeave={handlePressCancel}
       onContextMenu={(e) => e.preventDefault()}
       disabled={disabled}
       aria-label={`${zone.label}: tap for ${zone.move}, hold for ${zone.primeMove}`}
