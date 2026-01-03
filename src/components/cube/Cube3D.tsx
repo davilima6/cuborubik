@@ -7,7 +7,7 @@ import {
 } from "@/lib/rubik/types";
 import { Html, OrbitControls, RoundedBox } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 interface Cube3DProps {
@@ -21,21 +21,25 @@ interface CubieFaceProps {
   rotation: [number, number, number];
 }
 
-function CubieFace({ color, position, rotation }: CubieFaceProps) {
+const CubieFace = memo(function CubieFace({
+  color,
+  position,
+  rotation,
+}: CubieFaceProps) {
   return (
     <mesh position={position} rotation={rotation}>
       <planeGeometry args={[0.85, 0.85]} />
       <meshStandardMaterial color={color} />
     </mesh>
   );
-}
+});
 
 interface CubieProps {
   position: [number, number, number];
   colors: { [key: string]: string };
 }
 
-function Cubie({ position, colors }: CubieProps) {
+const Cubie = memo(function Cubie({ position, colors }: CubieProps) {
   return (
     <group position={position}>
       <RoundedBox args={[0.95, 0.95, 0.95]} radius={0.08} smoothness={4}>
@@ -87,10 +91,11 @@ function Cubie({ position, colors }: CubieProps) {
       )}
     </group>
   );
-}
+});
 
 // Face label component - floats near each face with transparency when facing away
-function FaceLabel({
+// Memoized and throttled for performance (60fps → 10fps for opacity updates)
+const FaceLabel = memo(function FaceLabel({
   face,
   position,
   parentRef,
@@ -101,31 +106,45 @@ function FaceLabel({
 }) {
   const { camera } = useThree();
   const [opacity, setOpacity] = useState(1);
+  const lastUpdateTime = useRef(0);
+  const currentOpacity = useRef(1);
 
-  useFrame(() => {
-    if (parentRef.current) {
-      // Get world position of the label (accounting for parent rotation)
-      const labelWorldPos = new THREE.Vector3(...position);
-      labelWorldPos.applyMatrix4(parentRef.current.matrixWorld);
+  // Reusable vectors to avoid allocations every frame (eliminates 1,440 allocations/sec)
+  const labelWorldPos = useRef(new THREE.Vector3());
+  const cubeCenter = useRef(new THREE.Vector3());
+  const labelDir = useRef(new THREE.Vector3());
+  const cameraDir = useRef(new THREE.Vector3());
 
-      // Direction from cube center to label (in world space)
-      const cubeCenter = new THREE.Vector3();
-      parentRef.current.getWorldPosition(cubeCenter);
-      const labelDir = new THREE.Vector3()
-        .subVectors(labelWorldPos, cubeCenter)
-        .normalize();
+  useFrame((state) => {
+    if (!parentRef.current) return;
 
-      // Direction from cube center to camera
-      const cameraDir = new THREE.Vector3()
-        .subVectors(camera.position, cubeCenter)
-        .normalize();
+    // Throttle opacity updates to ~10fps instead of 60fps (low priority visual feedback)
+    // Reduces React re-renders from 360/sec to 60/sec (83% reduction)
+    const now = state.clock.elapsedTime;
+    if (now - lastUpdateTime.current < 0.1) return;
+    lastUpdateTime.current = now;
 
-      // Dot product tells us alignment: 1 = same direction (facing camera), -1 = opposite (facing away)
-      const dot = labelDir.dot(cameraDir);
+    // Reuse vector objects to avoid garbage collection pressure
+    labelWorldPos.current.set(...position);
+    labelWorldPos.current.applyMatrix4(parentRef.current.matrixWorld);
 
-      // Update opacity based on whether face is toward camera
-      // Use a smooth transition with a threshold
-      const newOpacity = dot > 0.1 ? 1 : 0.25;
+    parentRef.current.getWorldPosition(cubeCenter.current);
+    labelDir.current
+      .subVectors(labelWorldPos.current, cubeCenter.current)
+      .normalize();
+    cameraDir.current
+      .subVectors(camera.position, cubeCenter.current)
+      .normalize();
+
+    // Dot product tells us alignment: 1 = same direction (facing camera), -1 = opposite (facing away)
+    const dot = labelDir.current.dot(cameraDir.current);
+
+    // Update opacity based on whether face is toward camera
+    const newOpacity = dot > 0.1 ? 1 : 0.25;
+
+    // Only update state if opacity actually changed (avoid unnecessary re-renders)
+    if (currentOpacity.current !== newOpacity) {
+      currentOpacity.current = newOpacity;
       setOpacity(newOpacity);
     }
   });
@@ -145,7 +164,7 @@ function FaceLabel({
       </div>
     </Html>
   );
-}
+});
 
 // Check if a cubie at position is affected by a face rotation
 function isAffectedByRotation(
@@ -343,13 +362,13 @@ function CubeGroup({
 }
 
 // Ground grid for better spatial reference
-function GroundGrid() {
+const GroundGrid = memo(function GroundGrid() {
   return (
     <group position={[0, -2.5, 0]}>
       <gridHelper args={[12, 12, "#444444", "#222222"]} />
     </group>
   );
-}
+});
 
 interface Cube3DContainerProps extends Cube3DProps {
   isFullscreen?: boolean;
