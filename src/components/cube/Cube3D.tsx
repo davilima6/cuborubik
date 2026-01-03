@@ -222,75 +222,83 @@ function CubeGroup({ cubeState, rotationAnimation }: { cubeState: CubeState; rot
   );
 }
 
-// Mini reference cube label - using Html for reliable rendering
-function MiniLabel({ position, label }: { position: [number, number, number]; label: string }) {
+// Axis indicator - shows orientation like in 3D software
+function AxisIndicator() {
+  const groupRef = useRef<THREE.Group>(null);
+  
   return (
-    <Html position={position} center distanceFactor={4} style={{ pointerEvents: 'none' }}>
-      <div className="text-black text-xs font-bold select-none">{label}</div>
-    </Html>
-  );
-}
-
-// Mini reference cube - shows standard orientation
-function MiniReferenceCube() {
-  const faceColors = {
-    U: '#ffffff', // White
-    D: '#fcd34d', // Yellow
-    F: '#22c55e', // Green
-    B: '#3b82f6', // Blue
-    L: '#f97316', // Orange
-    R: '#ef4444', // Red
-  };
-
-  return (
-    <group scale={0.4}>
-      {/* Core */}
-      <RoundedBox args={[1.9, 1.9, 1.9]} radius={0.1} smoothness={4}>
-        <meshStandardMaterial color="#222222" />
-      </RoundedBox>
-      
-      {/* Face stickers with labels */}
-      {/* Right - R */}
-      <mesh position={[0.96, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[1.7, 1.7]} />
-        <meshStandardMaterial color={faceColors.R} />
+    <group ref={groupRef} scale={0.8}>
+      {/* X axis - Red (R/L) */}
+      <group>
+        <mesh position={[0.5, 0, 0]}>
+          <cylinderGeometry args={[0.04, 0.04, 1, 8]} />
+          <meshStandardMaterial color="#ef4444" />
+        </mesh>
+        <mesh position={[1.1, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
+          <coneGeometry args={[0.1, 0.2, 8]} />
+          <meshStandardMaterial color="#ef4444" />
+        </mesh>
+        <Html position={[1.4, 0, 0]} center distanceFactor={3} style={{ pointerEvents: 'none' }}>
+          <div className="text-[10px] font-bold text-red-500 select-none">R</div>
+        </Html>
+      </group>
+      <mesh rotation={[0, 0, -Math.PI / 2]}>
+        <cylinderGeometry args={[0.04, 0.04, 1, 8]} />
+        <meshStandardMaterial color="#ef4444" opacity={0.3} transparent />
       </mesh>
-      <MiniLabel position={[1.0, 0, 0]} label="R" />
+      <Html position={[-0.6, 0, 0]} center distanceFactor={3} style={{ pointerEvents: 'none' }}>
+        <div className="text-[10px] font-bold text-orange-500 select-none">L</div>
+      </Html>
       
-      {/* Left - L */}
-      <mesh position={[-0.96, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-        <planeGeometry args={[1.7, 1.7]} />
-        <meshStandardMaterial color={faceColors.L} />
+      {/* Y axis - White/Yellow (U/D) */}
+      <group>
+        <mesh position={[0, 0.5, 0]}>
+          <cylinderGeometry args={[0.04, 0.04, 1, 8]} />
+          <meshStandardMaterial color="#ffffff" />
+        </mesh>
+        <mesh position={[0, 1.1, 0]}>
+          <coneGeometry args={[0.1, 0.2, 8]} />
+          <meshStandardMaterial color="#ffffff" />
+        </mesh>
+        <Html position={[0, 1.4, 0]} center distanceFactor={3} style={{ pointerEvents: 'none' }}>
+          <div className="text-[10px] font-bold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] select-none">U</div>
+        </Html>
+      </group>
+      <mesh position={[0, -0.5, 0]}>
+        <cylinderGeometry args={[0.04, 0.04, 1, 8]} />
+        <meshStandardMaterial color="#fcd34d" opacity={0.5} transparent />
       </mesh>
-      <MiniLabel position={[-1.0, 0, 0]} label="L" />
+      <Html position={[0, -0.6, 0]} center distanceFactor={3} style={{ pointerEvents: 'none' }}>
+        <div className="text-[10px] font-bold text-yellow-400 select-none">D</div>
+      </Html>
       
-      {/* Top - U */}
-      <mesh position={[0, 0.96, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[1.7, 1.7]} />
-        <meshStandardMaterial color={faceColors.U} />
+      {/* Z axis - Green/Blue (F/B) */}
+      <group>
+        <mesh position={[0, 0, 0.5]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.04, 0.04, 1, 8]} />
+          <meshStandardMaterial color="#22c55e" />
+        </mesh>
+        <mesh position={[0, 0, 1.1]} rotation={[Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[0.1, 0.2, 8]} />
+          <meshStandardMaterial color="#22c55e" />
+        </mesh>
+        <Html position={[0, 0, 1.4]} center distanceFactor={3} style={{ pointerEvents: 'none' }}>
+          <div className="text-[10px] font-bold text-green-500 select-none">F</div>
+        </Html>
+      </group>
+      <mesh position={[0, 0, -0.5]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.04, 0.04, 1, 8]} />
+        <meshStandardMaterial color="#3b82f6" opacity={0.5} transparent />
       </mesh>
-      <MiniLabel position={[0, 1.0, 0]} label="U" />
+      <Html position={[0, 0, -0.6]} center distanceFactor={3} style={{ pointerEvents: 'none' }}>
+        <div className="text-[10px] font-bold text-blue-500 select-none">B</div>
+      </Html>
       
-      {/* Bottom - D */}
-      <mesh position={[0, -0.96, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[1.7, 1.7]} />
-        <meshStandardMaterial color={faceColors.D} />
+      {/* Center sphere */}
+      <mesh>
+        <sphereGeometry args={[0.08, 16, 16]} />
+        <meshStandardMaterial color="#666666" />
       </mesh>
-      <MiniLabel position={[0, -1.0, 0]} label="D" />
-      
-      {/* Front - F */}
-      <mesh position={[0, 0, 0.96]}>
-        <planeGeometry args={[1.7, 1.7]} />
-        <meshStandardMaterial color={faceColors.F} />
-      </mesh>
-      <MiniLabel position={[0, 0, 1.0]} label="F" />
-      
-      {/* Back - B */}
-      <mesh position={[0, 0, -0.96]} rotation={[0, Math.PI, 0]}>
-        <planeGeometry args={[1.7, 1.7]} />
-        <meshStandardMaterial color={faceColors.B} />
-      </mesh>
-      <MiniLabel position={[0, 0, -1.0]} label="B" />
     </group>
   );
 }
@@ -320,16 +328,13 @@ export function Cube3D({ cubeState, rotationAnimation, isFullscreen }: Cube3DCon
         />
       </Canvas>
       
-      {/* Mini reference cube - fixed in corner */}
-      <div className="absolute bottom-3 right-3 w-24 h-24 rounded-lg overflow-hidden bg-background/80 backdrop-blur border border-border/50">
-        <Canvas camera={{ position: [2.5, 2, 2.5], fov: 50 }}>
+      {/* Axis indicator - fixed in corner */}
+      <div className="absolute bottom-3 right-3 w-20 h-20 rounded-lg overflow-hidden bg-background/80 backdrop-blur border border-border/50">
+        <Canvas camera={{ position: [2.5, 2, 2.5], fov: 40 }}>
           <ambientLight intensity={0.8} />
           <directionalLight position={[5, 5, 5]} intensity={0.6} />
-          <MiniReferenceCube />
+          <AxisIndicator />
         </Canvas>
-        <div className="absolute bottom-1 left-0 right-0 text-center">
-          <span className="text-[9px] text-muted-foreground font-medium">Reference</span>
-        </div>
       </div>
     </div>
   );
