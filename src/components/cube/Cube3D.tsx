@@ -1,6 +1,6 @@
 import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, RoundedBox, Text, Html } from '@react-three/drei';
+import { OrbitControls, RoundedBox, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { CubeState, FaceColor, RotationAnimation, Face } from '@/lib/rubik/types';
 import { FACE_COLORS } from '@/lib/rubik/constants';
@@ -48,22 +48,19 @@ function Cubie({ position, colors }: CubieProps) {
   );
 }
 
-// Face label component - floats near each face
-function FaceLabel({ face, position, rotation }: { face: string; position: [number, number, number]; rotation: [number, number, number] }) {
+// Face label component - floats near each face using Html for reliable rendering
+function FaceLabel({ face, position }: { face: string; position: [number, number, number] }) {
   return (
-    <Text
+    <Html
       position={position}
-      rotation={rotation}
-      fontSize={0.5}
-      color="#ffffff"
-      anchorX="center"
-      anchorY="middle"
-      outlineWidth={0.05}
-      outlineColor="#000000"
-      font="/fonts/inter-bold.woff"
+      center
+      distanceFactor={8}
+      style={{ pointerEvents: 'none' }}
     >
-      {face}
-    </Text>
+      <div className="text-white text-lg font-bold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] select-none">
+        {face}
+      </div>
+    </Html>
   );
 }
 
@@ -201,12 +198,12 @@ function CubeGroup({ cubeState, rotationAnimation }: { cubeState: CubeState; rot
   return (
     <group ref={groupRef}>
       {/* Face labels - positioned slightly outside each face */}
-      <FaceLabel face="U" position={[0, 2.2, 0]} rotation={[-Math.PI / 2, 0, 0]} />
-      <FaceLabel face="D" position={[0, -2.2, 0]} rotation={[Math.PI / 2, 0, 0]} />
-      <FaceLabel face="F" position={[0, 0, 2.2]} rotation={[0, 0, 0]} />
-      <FaceLabel face="B" position={[0, 0, -2.2]} rotation={[0, Math.PI, 0]} />
-      <FaceLabel face="L" position={[-2.2, 0, 0]} rotation={[0, -Math.PI / 2, 0]} />
-      <FaceLabel face="R" position={[2.2, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
+      <FaceLabel face="U" position={[0, 2.2, 0]} />
+      <FaceLabel face="D" position={[0, -2.2, 0]} />
+      <FaceLabel face="F" position={[0, 0, 2.2]} />
+      <FaceLabel face="B" position={[0, 0, -2.2]} />
+      <FaceLabel face="L" position={[-2.2, 0, 0]} />
+      <FaceLabel face="R" position={[2.2, 0, 0]} />
       
       {/* Static cubies */}
       <group ref={staticGroupRef}>
@@ -222,6 +219,15 @@ function CubeGroup({ cubeState, rotationAnimation }: { cubeState: CubeState; rot
         ))}
       </group>
     </group>
+  );
+}
+
+// Mini reference cube label - using Html for reliable rendering
+function MiniLabel({ position, label }: { position: [number, number, number]; label: string }) {
+  return (
+    <Html position={position} center distanceFactor={4} style={{ pointerEvents: 'none' }}>
+      <div className="text-black text-xs font-bold select-none">{label}</div>
+    </Html>
   );
 }
 
@@ -249,42 +255,42 @@ function MiniReferenceCube() {
         <planeGeometry args={[1.7, 1.7]} />
         <meshStandardMaterial color={faceColors.R} />
       </mesh>
-      <Text position={[1.0, 0, 0]} rotation={[0, Math.PI / 2, 0]} fontSize={0.5} color="#000000">R</Text>
+      <MiniLabel position={[1.0, 0, 0]} label="R" />
       
       {/* Left - L */}
       <mesh position={[-0.96, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
         <planeGeometry args={[1.7, 1.7]} />
         <meshStandardMaterial color={faceColors.L} />
       </mesh>
-      <Text position={[-1.0, 0, 0]} rotation={[0, -Math.PI / 2, 0]} fontSize={0.5} color="#000000">L</Text>
+      <MiniLabel position={[-1.0, 0, 0]} label="L" />
       
       {/* Top - U */}
       <mesh position={[0, 0.96, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[1.7, 1.7]} />
         <meshStandardMaterial color={faceColors.U} />
       </mesh>
-      <Text position={[0, 1.0, 0]} rotation={[-Math.PI / 2, 0, 0]} fontSize={0.5} color="#000000">U</Text>
+      <MiniLabel position={[0, 1.0, 0]} label="U" />
       
       {/* Bottom - D */}
       <mesh position={[0, -0.96, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[1.7, 1.7]} />
         <meshStandardMaterial color={faceColors.D} />
       </mesh>
-      <Text position={[0, -1.0, 0]} rotation={[Math.PI / 2, 0, 0]} fontSize={0.5} color="#000000">D</Text>
+      <MiniLabel position={[0, -1.0, 0]} label="D" />
       
       {/* Front - F */}
       <mesh position={[0, 0, 0.96]}>
         <planeGeometry args={[1.7, 1.7]} />
         <meshStandardMaterial color={faceColors.F} />
       </mesh>
-      <Text position={[0, 0, 1.0]} fontSize={0.5} color="#000000">F</Text>
+      <MiniLabel position={[0, 0, 1.0]} label="F" />
       
       {/* Back - B */}
       <mesh position={[0, 0, -0.96]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[1.7, 1.7]} />
         <meshStandardMaterial color={faceColors.B} />
       </mesh>
-      <Text position={[0, 0, -1.0]} rotation={[0, Math.PI, 0]} fontSize={0.5} color="#000000">B</Text>
+      <MiniLabel position={[0, 0, -1.0]} label="B" />
     </group>
   );
 }
